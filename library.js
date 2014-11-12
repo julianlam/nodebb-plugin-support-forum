@@ -6,6 +6,7 @@ var winston = module.parent.require('winston'),
 	Categories = module.parent.require('./categories'),
 	Meta = module.parent.require('./meta'),
 	db = module.parent.require('./database'),
+	async = module.parent.require('async'),
 
 	plugin = {};
 
@@ -28,24 +29,29 @@ plugin.init = function(params, callback) {
 /* Meat */
 
 plugin.supportify = function(data, callback) {	// There are only two hard things in Computer Science: cache invalidation and naming things. -- Phil Karlton
-	if (parseInt(data.cid, 10) === parseInt(plugin.config.cid, 10)) {
-		winston.verbose('[plugin/support-forum] Support forum accessed by uid ' + data.uid);
-		if (data.uid > 0) {
-			User.getUserField(data.uid, 'userslug', function(err, userslug) {
-				data.targetUid = data.uid;
+	User.isAdministrator(data.uid, function(err, isAdmin) {
+		if (!isAdmin && parseInt(data.cid, 10) === parseInt(plugin.config.cid, 10)) {
+			winston.verbose('[plugins/support-forum] Support forum accessed by uid ' + data.uid);
+			if (data.uid > 0) {
+				User.getUserField(data.uid, 'userslug', function(err, userslug) {
+					data.targetUid = data.uid;
 
-				callback(null, data);
-			});
+					callback(null, data);
+				});
+			}
+		} else {
+			callback(null, data);
 		}
-	} else {
-		callback(null, data);
-	}
+	});
 };
 
 plugin.restrict = function(privileges, callback) {
-	Topics.getTopicFields(privileges.tid, ['cid', 'uid'], function(err, topicObj) {
-		if (parseInt(topicObj.cid, 10) === parseInt(plugin.config.cid, 10) && parseInt(topicObj.uid, 10) !== parseInt(privileges.uid, 10)) {
-			winston.verbose('[plugins/support-forum] tid ' + privileges.tid + ' (author uid: ' + topicObj.uid + ') access attempt by uid ' + privileges.uid + ' blocked.');
+	async.parallel({
+		topicObj: async.apply(Topics.getTopicFields, privileges.tid, ['cid', 'uid']),
+		isAdmin: async.apply(User.isAdministrator, privileges.uid)
+	}, function(err, data) {
+		if (parseInt(data.topicObj.cid, 10) === parseInt(plugin.config.cid, 10) && parseInt(data.topicObj.uid, 10) !== parseInt(privileges.uid, 10) && !data.isAdmin) {
+			winston.verbose('[plugins/support-forum] tid ' + privileges.tid + ' (author uid: ' + data.topicObj.uid + ') access attempt by uid ' + privileges.uid + ' blocked.');
 			privileges.read = false;
 		}
 		
