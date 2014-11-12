@@ -1,25 +1,28 @@
 {
-  "name": "nodebb-plugin-quickstart",
-  "version": "0.1.1",
-  "description": "A starter kit for quickly creating NodeBB plugins",
+  "name": "nodebb-plugin-support-forum",
+  "version": "1.0.0",
+  "description": "Turns a single category into a \"Support Forum\", topic creators can only see their own topics",
   "main": "library.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/psychobunny/nodebb-plugin-quickstart"
+    "url": "https://github.com/julianlam/nodebb-plugin-support-forum"
   },
   "keywords": [
     "nodebb",
     "plugin",
-    "quickstart",
-    "shell"
+    "support",
+    "privacy"
   ],
   "author": {
-    "name": "psychobunny",
-    "email": "psycho.bunny@hotmail.com"
+    "name": "Julian Lam",
+    "email": "julian@nodebb.org"
   },
-  "license": "BSD-2-Clause",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/psychobunny/nodebb-plugin-quickstart/issues"
+    "url": "https://github.com/julianlam/nodebb-plugin-support-forum/issues"
   },
-  "readmeFilename": "README.md"
+  "readmeFilename": "README.md",
+  "nbbpm": {
+    "compatibility": "^0.6.0"
+  }
 }

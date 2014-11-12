@@ -1,25 +1,14 @@
 {
-	"id": "nodebb-plugin-quickstart",
-	"name": "Quickstart Plugin for NodeBB",
-	"description": "A starter kit for quickly creating NodeBB plugins",
-	"url": "https://github.com/NodeBB/nodebb-plugin-quickstart",
+	"id": "nodebb-plugin-support-forum",
+	"name": "Support Forum",
+	"description": "Turns a single category into a \"Support Forum\", topic creators can only see their own topics",
+	"url": "https://github.com/julianlam/nodebb-plugin-support-forum",
 	"library": "./library.js",
 	"hooks": [
-		{
-			"hook": "static:app.load", "method": "init"
-		},
-		{
-			"hook": "filter:admin.header.build", "method": "addAdminNavigation"
-		}
-	],
-	"staticDirs": {
-		"static": "./static"
-	},
-	"less": [
-		"static/style.less"
-	],
-	"scripts": [
-		"static/lib/main.js"
+		{ "hook": "filter:category.topics.get", "method": "supportify" },
+		{ "hook": "filter:privileges.topics.get", "method": "restrict" },
+		{ "hook": "static:app.load", "method": "init" },
+		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" }
 	],
 	"templates": "static/templates"
 }
