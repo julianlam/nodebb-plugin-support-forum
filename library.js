@@ -2,6 +2,7 @@
 
 var winston = module.parent.require('winston'),
 	User = module.parent.require('./user'),
+	Posts = module.parent.require('./posts'),
 	Topics = module.parent.require('./topics'),
 	Categories = module.parent.require('./categories'),
 	Meta = module.parent.require('./meta'),
@@ -57,8 +58,39 @@ plugin.restrict.topic = function(privileges, callback) {
 };
 
 plugin.restrict.category = function(privileges, callback) {
-	privileges.read = parseInt(privileges.uid, 10) > 0;
+	var allowed = parseInt(privileges.uid, 10) > 0
+	privileges.read = allowed;
+	privileges['topics:create'] = allowed;
+
+	if (!allowed) {
+		winston.verbose('[plugins/support-forum] Access to cid ' + privileges.cid + ' by guest blocked.');
+	}
+
 	callback(null, privileges);
+};
+
+plugin.filterPids = function(data, callback) {
+	User.isAdministrator(data.uid, function(err, isAdmin) {
+		if (!isAdmin) {
+			async.waterfall([
+				async.apply(Posts.getCidsByPids, data.pids),
+				function(cids, next) {
+					Posts.getPostsFields(data.pids, ['uid'], function(err, fields) {
+						data.pids = fields.reduce(function(prev, cur, idx) {
+							if (parseInt(cids[idx], 10) !== parseInt(plugin.config.cid, 10) || parseInt(cur.uid, 10) === parseInt(data.uid, 10)) {
+								prev.push(data.pids[idx]);
+							}
+							return prev;
+						}, []);
+
+						callback(null, data);
+					});
+				}
+			]);
+		} else {
+			callback(null, data);
+		}
+	});
 };
 
 /* Admin stuff */
