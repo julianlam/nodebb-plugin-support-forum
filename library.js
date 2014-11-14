@@ -32,20 +32,17 @@ plugin.supportify = function(data, callback) {	// There are only two hard things
 	User.isAdministrator(data.uid, function(err, isAdmin) {
 		if (!isAdmin && parseInt(data.cid, 10) === parseInt(plugin.config.cid, 10)) {
 			winston.verbose('[plugins/support-forum] Support forum accessed by uid ' + data.uid);
-			if (data.uid > 0) {
-				User.getUserField(data.uid, 'userslug', function(err, userslug) {
-					data.targetUid = data.uid;
-
-					callback(null, data);
-				});
-			}
+			data.targetUid = data.uid;
+			callback(null, data);
 		} else {
 			callback(null, data);
 		}
 	});
 };
 
-plugin.restrict = function(privileges, callback) {
+plugin.restrict = {};
+
+plugin.restrict.topic = function(privileges, callback) {
 	async.parallel({
 		topicObj: async.apply(Topics.getTopicFields, privileges.tid, ['cid', 'uid']),
 		isAdmin: async.apply(User.isAdministrator, privileges.uid)
@@ -57,6 +54,11 @@ plugin.restrict = function(privileges, callback) {
 		
 		callback(null, privileges);
 	});
+};
+
+plugin.restrict.category = function(privileges, callback) {
+	privileges.read = parseInt(privileges.uid, 10) > 0;
+	callback(null, privileges);
 };
 
 /* Admin stuff */

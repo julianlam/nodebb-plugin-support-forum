@@ -6,7 +6,8 @@
 	"library": "./library.js",
 	"hooks": [
 		{ "hook": "filter:category.topics.get", "method": "supportify" },
-		{ "hook": "filter:privileges.topics.get", "method": "restrict" },
+		{ "hook": "filter:privileges.topics.get", "method": "restrict.topic" },
+		{ "hook": "filter:privileges.categories.get", "method": "restrict.category" },
 		{ "hook": "static:app.load", "method": "init" },
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" }
 	],
