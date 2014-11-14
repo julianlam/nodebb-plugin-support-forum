@@ -93,6 +93,25 @@ plugin.filterPids = function(data, callback) {
 	});
 };
 
+plugin.filterTids = function(data, callback) {
+	User.isAdministrator(data.uid, function(err, isAdmin) {
+		if (!isAdmin) {
+			Topics.getTopicsFields(data.tids, ['cid', 'uid'], function(err, fields) {
+				data.tids = fields.reduce(function(prev, cur, idx) {
+					if (parseInt(cur.cid, 10) !== parseInt(plugin.config.cid, 10) || parseInt(cur.uid, 10) === parseInt(data.uid, 10)) {
+						prev.push(data.tids[idx]);
+					}
+					return prev;
+				}, []);
+
+				callback(null, data);
+			});
+		} else {
+			callback(null, data);
+		}
+	});
+};
+
 /* Admin stuff */
 
 plugin.addAdminNavigation = function(header, callback) {

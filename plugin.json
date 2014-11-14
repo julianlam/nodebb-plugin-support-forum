@@ -8,6 +8,7 @@
 		{ "hook": "filter:category.topics.prepare", "method": "supportify" },
 		{ "hook": "filter:privileges.topics.get", "method": "restrict.topic" },
 		{ "hook": "filter:privileges.categories.get", "method": "restrict.category" },
+		{ "hook": "filter:privileges.topics.filter", "method": "filterTids" },
 		{ "hook": "filter:privileges.posts.filter", "method": "filterPids" },
 		{ "hook": "filter:categories.recent", "method": "filterPids" },
 		{ "hook": "static:app.load", "method": "init" },
