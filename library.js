@@ -58,15 +58,20 @@ plugin.restrict.topic = function(privileges, callback) {
 };
 
 plugin.restrict.category = function(privileges, callback) {
-	var allowed = parseInt(privileges.uid, 10) > 0
-	privileges.read = allowed;
-	privileges['topics:create'] = allowed;
+	if (parseInt(privileges.cid, 10) === parseInt(plugin.config.cid, 10)) {
+		// Override existing privileges so that regular users can enter and create topics
+		var allowed = parseInt(privileges.uid, 10) > 0
+		privileges.read = allowed;
+		privileges['topics:create'] = allowed;
 
-	if (!allowed) {
-		winston.verbose('[plugins/support-forum] Access to cid ' + privileges.cid + ' by guest blocked.');
+		if (!allowed) {
+			winston.verbose('[plugins/support-forum] Access to cid ' + privileges.cid + ' by guest blocked.');
+		}
+
+		callback(null, privileges);
+	} else {
+		callback(null, privileges);
 	}
-
-	callback(null, privileges);
 };
 
 plugin.filterPids = function(data, callback) {
