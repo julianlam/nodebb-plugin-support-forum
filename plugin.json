@@ -11,6 +11,7 @@
 		{ "hook": "filter:privileges.topics.filter", "method": "filterTids" },
 		{ "hook": "filter:privileges.posts.filter", "method": "filterPids" },
 		{ "hook": "filter:categories.recent", "method": "filterPids" },
+		{ "hook": "filter:category.topics.get", "method": "filterCategory" },
 		{ "hook": "static:app.load", "method": "init" },
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" }
 	],

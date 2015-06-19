@@ -16,6 +16,12 @@
 							Designating a forum as a support forum will restrict access to that category's topics to only admit admins and the original topic creator. Please ensure that you have also set the "# of Recent Replies" value to "0" in this category's settings.
 						</p>
 					</div>
+					<div class="form-group">
+						<label for="ownOnly">
+							<input type="checkbox" name="ownOnly" id="ownOnly">
+							Non-admins see only their own topics
+						</label>
+					</div>
 				</form>
 			</div>
 		</div>
