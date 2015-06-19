@@ -19,10 +19,10 @@
 					<div class="form-group">
 						<label for="ownOnly">
 							<input type="checkbox" name="ownOnly" id="ownOnly">
-							Non-admins see only their own topics
+							Non-admins see only their own topics listed
 						</label>
 						<p class="help-block">
-							If checked, users without administrative privileges will see only their own topics when in a support forum.
+							If checked, users without administrative privileges will see only their own topics listed in a support forum.
 						</p>
 					</div>
 				</form>
