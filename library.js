@@ -15,7 +15,7 @@ plugin.init = function(params, callback) {
 	var app = params.router,
 		middleware = params.middleware,
 		controllers = params.controllers;
-		
+
 	app.get('/admin/plugins/support-forum', middleware.admin.buildHeader, renderAdmin);
 	app.get('/api/admin/plugins/support-forum', renderAdmin);
 
@@ -52,7 +52,7 @@ plugin.restrict.topic = function(privileges, callback) {
 			winston.verbose('[plugins/support-forum] tid ' + privileges.tid + ' (author uid: ' + data.topicObj.uid + ') access attempt by uid ' + privileges.uid + ' blocked.');
 			privileges.read = false;
 		}
-		
+
 		callback(null, privileges);
 	});
 };
@@ -115,6 +115,28 @@ plugin.filterTids = function(data, callback) {
 			callback(null, data);
 		}
 	});
+};
+
+plugin.filterCategory = function(data, callback) {
+	if (plugin.config.ownOnly=='on') {
+		User.isAdministrator(data.uid, function(err, isAdmin) {
+			if (!isAdmin) {
+				var filtered = [];
+				if (data.topics && data.topics.length) {
+					data.topics.forEach( function(topic) {
+						if (parseInt(topic.cid, 10) !== parseInt(plugin.config.cid, 10) || parseInt(topic.uid, 10) === parseInt(data.uid)) {
+							filtered.push(topic);
+						}
+					});
+				}
+				callback(null, {topics:filtered,uid:data.uid});
+			} else {
+				callback(null, data);
+			}
+		});
+	} else {
+		callback(null, data);
+	}
 };
 
 /* Admin stuff */
