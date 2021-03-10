@@ -1,13 +1,13 @@
 "use strict";
 
-var winston = module.parent.require('winston'),
-	User = module.parent.require('./user'),
-	Posts = module.parent.require('./posts'),
-	Topics = module.parent.require('./topics'),
-	Categories = module.parent.require('./categories'),
-	Meta = module.parent.require('./meta'),
-	db = module.parent.require('./database'),
-	async = module.parent.require('async'),
+var winston = require.main.require('winston'),
+	User = require.main.require('./src/user'),
+	Posts = require.main.require('./src/posts'),
+	Topics = require.main.require('./src/topics'),
+	Categories = require.main.require('./src/categories'),
+	Meta = require.main.require('./src/meta'),
+	db = require.main.require('./src/database'),
+	async = require('async'),
 
 	plugin = {};
 
