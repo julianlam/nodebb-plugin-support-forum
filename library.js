@@ -29,8 +29,49 @@ plugin.init = function(params, callback) {
 
 /* Meat */
 
-plugin.supportify = function(data, callback) {	// There are only two hard things in Computer Science: cache invalidation and naming things. -- Phil Karlton
-	User.isAdministrator(data.uid, function(err, isAdmin) {
+plugin.blockNewTopicAlert = function (data, callback) {
+	if (data.notification.type === 'new-topic') {
+		async.waterfall([
+			async.apply(Topics.getTopicFields, data.notification.tid, ['cid']),
+			function (topicInfo, next) {
+				if (parseInt(topicInfo.cid, 10) === parseInt(plugin.config.cid, 10)) {
+					const { uids } = data;
+					Promise.all(uids.map(uid => User.isAdministrator(parseInt(uid, 10))))
+					.then((results) => {
+						data.uids = uids.filter((_v, index) => results[index])
+						winston.verbose(`[plugins/support-forum] Notification (category:support - cid: ${plugin.config.cid}) blocked for ${uids.length - data.uids.length} users not admin`);
+						callback(null, data);
+					});
+				} else {
+					callback(null, data); // not support forum category
+				}
+			}
+		]);
+	} else {
+		callback(null, data); // not new-topic type
+	}
+}
+
+plugin.blockNewTopicAlert = function (data, callback) {
+	if (data.notification.type === 'new-topic') {
+		async.waterfall([
+			async.apply(Topics.getTopicFields, data.notification.tid, ['cid']),
+			function (topicInfo, next) {
+				if (parseInt(topicInfo.cid, 10) === parseInt(plugin.config.cid, 10)) {
+					winston.verbose(`[plugins/support-forum] Notification (category:support - ${plugin.config.cid}) blocked`);
+					callback(null, false);
+				} else {
+					callback(null, data); // not support forum category
+				}
+			}
+		]);
+	} else {
+		callback(null, data); // not new-topic type
+	}
+}
+
+plugin.supportify = function (data, callback) {	// There are only two hard things in Computer Science: cache invalidation and naming things. -- Phil Karlton
+	User.isAdministrator(data.uid, function (err, isAdmin) {
 		if (!isAdmin && parseInt(data.cid, 10) === parseInt(plugin.config.cid, 10)) {
 			winston.verbose('[plugins/support-forum] Support forum accessed by uid ' + data.uid);
 			data.targetUid = data.uid;
