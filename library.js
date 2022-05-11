@@ -50,7 +50,7 @@ plugin.restrict.topic = function(privileges, callback) {
 	}, function(err, data) {
 		if (parseInt(data.topicObj.cid, 10) === parseInt(plugin.config.cid, 10) && parseInt(data.topicObj.uid, 10) !== parseInt(privileges.uid, 10) && !data.isAdmin) {
 			winston.verbose('[plugins/support-forum] tid ' + privileges.tid + ' (author uid: ' + data.topicObj.uid + ') access attempt by uid ' + privileges.uid + ' blocked.');
-			privileges.read = false;
+			privileges['topics:read'] = false;
 		}
 
 		callback(null, privileges);
