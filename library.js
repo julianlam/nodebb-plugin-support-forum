@@ -29,8 +29,44 @@ plugin.init = function(params, callback) {
 
 /* Meat */
 
-plugin.supportify = function(data, callback) {	// There are only two hard things in Computer Science: cache invalidation and naming things. -- Phil Karlton
-	User.isAdministrator(data.uid, function(err, isAdmin) {
+plugin.blockNewTopicAlert = function (data, callback) {
+	if (data.notification.type === 'new-topic') {
+		async.waterfall([
+			async.apply(Topics.getTopicFields, data.notification.tid, ['cid']),
+			function (topicInfo, next) {
+				if (parseInt(topicInfo.cid, 10) === parseInt(plugin.config.cid, 10)) {
+					winston.verbose(`[plugins/support-forum] Notification (category:support - ${plugin.config.cid}) blocked`);
+					callback(null, false);
+				} else {
+					callback(null, data); // not support forum category
+				}
+			}
+		]);
+	} else {
+		callback(null, data); // not new-topic type
+	}
+}
+
+plugin.blockNewTopicAlert = function (data, callback) {
+	if (data.notification.type === 'new-topic') {
+		async.waterfall([
+			async.apply(Topics.getTopicFields, data.notification.tid, ['cid']),
+			function (topicInfo, next) {
+				if (parseInt(topicInfo.cid, 10) === parseInt(plugin.config.cid, 10)) {
+					winston.verbose(`[plugins/support-forum] Notification (category:support - ${plugin.config.cid}) blocked`);
+					callback(null, false);
+				} else {
+					callback(null, data); // not support forum category
+				}
+			}
+		]);
+	} else {
+		callback(null, data); // not new-topic type
+	}
+}
+
+plugin.supportify = function (data, callback) {	// There are only two hard things in Computer Science: cache invalidation and naming things. -- Phil Karlton
+	User.isAdministrator(data.uid, function (err, isAdmin) {
 		if (!isAdmin && parseInt(data.cid, 10) === parseInt(plugin.config.cid, 10)) {
 			winston.verbose('[plugins/support-forum] Support forum accessed by uid ' + data.uid);
 			data.targetUid = data.uid;
