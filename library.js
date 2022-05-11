@@ -35,8 +35,13 @@ plugin.blockNewTopicAlert = function (data, callback) {
 			async.apply(Topics.getTopicFields, data.notification.tid, ['cid']),
 			function (topicInfo, next) {
 				if (parseInt(topicInfo.cid, 10) === parseInt(plugin.config.cid, 10)) {
-					winston.verbose(`[plugins/support-forum] Notification (category:support - ${plugin.config.cid}) blocked`);
-					callback(null, false);
+					const { uids } = data;
+					Promise.all(uids.map(uid => User.isAdministrator(parseInt(uid, 10))))
+					.then((results) => {
+						data.uids = uids.filter((_v, index) => results[index])
+						winston.verbose(`[plugins/support-forum] Notification (category:support - cid: ${plugin.config.cid}) blocked for ${uids.length - data.uids.length} users not admin`);
+						callback(null, data);
+					});
 				} else {
 					callback(null, data); // not support forum category
 				}
