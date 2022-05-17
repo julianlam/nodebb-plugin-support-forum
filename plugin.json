@@ -5,6 +5,7 @@
 	"url": "https://github.com/julianlam/nodebb-plugin-support-forum",
 	"library": "./library.js",
 	"hooks": [
+		{ "hook": "filter:config.get", "method": "appendConfig" },
 		{ "hook": "filter:category.topics.prepare", "method": "supportify" },
 		{ "hook": "filter:privileges.topics.get", "method": "restrict.topic" },
 		{ "hook": "filter:privileges.categories.get", "method": "restrict.category" },
@@ -15,5 +16,8 @@
 		{ "hook": "static:app.load", "method": "init" },
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" }
 	],
-	"templates": "static/templates"
+	"templates": "static/templates",
+	"modules": {
+		"../admin/plugins/support-forum.js": "./static/lib/admin.js"
+	}
 }
