@@ -17,6 +17,9 @@
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" }
 	],
 	"templates": "static/templates",
+	"scripts": [
+		"static/lib/main.js"
+	],
 	"modules": {
 		"../admin/plugins/support-forum.js": "./static/lib/admin.js"
 	}
