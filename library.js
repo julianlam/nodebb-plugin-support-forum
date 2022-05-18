@@ -143,6 +143,20 @@ plugin.filterCategory = async (data) => {
 	return data;
 };
 
+plugin.blockNewTopicAlert = async (data) => {
+	if (data.notification.type === 'new-topic') {
+		const { cid } = await meta.settings.get('support-forum');
+		const topic = await Topics.getTopicFields(data.notification.tid, ['cid']);
+		if (parseInt(topic.cid, 10) === parseInt(cid, 10)) {
+			const { uids } = data;
+			const uidsFlow = await Promise.all(uids.map(uid => User.isAdministrator(parseInt(uid, 10))))
+			data.uids = uids.filter((_v, index) => uidsFlow[index])
+			if (uids.length - data.uids.length) winston.verbose(`[plugins/support-forum] Notification (category:support - cid: ${cid}) blocked for ${uids.length - data.uids.length} users not admin`);
+		}
+	}
+	return data;
+}
+
 /* Admin stuff */
 
 plugin.addAdminNavigation = function (header, callback) {
