@@ -143,7 +143,7 @@ plugin.filterCategory = async (data) => {
 	return data;
 };
 
-plugin.blockNewTopicAlert = async (data) => {
+plugin.blockUserFollowNotifications = async (data) => {
 	if (data.notification.type === 'new-topic') {
 		const { cid } = await meta.settings.get('support-forum');
 		const topic = await Topics.getTopicFields(data.notification.tid, ['cid']);
