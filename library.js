@@ -83,23 +83,21 @@ plugin.restrict.category = async (privileges) => {
 };
 
 plugin.filterPids = async (data) => {
-	const { cid } = await meta.settings.get('support-forum');
-	const isAdmin = await User.isAdministrator(data.uid);
-
-	if (!isAdmin) {
-		const cids = await Posts.getCidsByPids(data.pids);
-		const fields = await Posts.getPostsFields(data.pids, ['uid']);
-		data.pids = fields.reduce((prev, cur, idx) => {
-			if (
-				parseInt(cids[idx], 10) !== parseInt(cid, 10) ||
-				parseInt(cur.uid, 10) === parseInt(data.uid, 10)
-			) {
-				prev.push(data.pids[idx]);
-			}
-			return prev;
-		}, []);
+	const { caller, pids } = data;
+	if (caller.uid) {
+		const isAdmin = await User.isAdministrator(caller.uid);
+		if (isAdmin) return data;
 	}
-
+	const { cid } = await meta.settings.get('support-forum');
+	const postsData = await Topics.getTopicsFields(pids, ['cid', 'uid']);
+	const pidsFiltered = pids.filter((item, i) => {
+		const post = postsData[i];
+		const isSupport = parseInt(post.cid, 10) === parseInt(cid, 10);
+		const isAuthor = parseInt(post.uid, 10) === parseInt(caller.uid, 10);
+		return (!isSupport || isAuthor);
+	})
+	winston.verbose(`[plugins/support-forum] blocked ${pids.length - pidsFiltered.length} posts for user ${caller.uid}`);
+	data.pids = pidsFiltered;
 	return data;
 };
 
