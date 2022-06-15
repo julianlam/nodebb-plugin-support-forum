@@ -157,6 +157,26 @@ plugin.blockUserFollowNotifications = async (data) => {
 	return data;
 }
 
+plugin.filterProfile = async (data) => {
+	const uid = data.templateData.uid;
+	const uidLogged = data.caller.uid;
+	const { cid } = await meta.settings.get('support-forum');
+	const isAdmin = await User.isAdministrator(uidLogged);
+	if (parseInt(uid, 10) === parseInt(uidLogged, 10) || isAdmin) return data;
+	const lists = ['posts', 'latestPosts', 'bestPosts']
+	for (const listName of lists) {
+		const listFiltered = data.templateData[listName].filter((post) => {
+			const postCid = post.category.cid;
+			const isSupport = parseInt(postCid, 10) === parseInt(cid, 10);
+			return !isSupport;
+		})
+		const removedCount = data.templateData[listName].length - listFiltered.length;	
+		winston.verbose(`[plugins/support-forum] blocked ${removedCount} posts on '${listName}' list in uid ${uid} for uid ${uidLogged}`);
+		data.templateData[listName] = listFiltered;
+	}
+	return data;
+}
+
 /* Admin stuff */
 
 plugin.addAdminNavigation = function (header, callback) {

@@ -15,7 +15,8 @@
 		{ "hook": "filter:category.topics.get", "method": "filterCategory" },
 		{ "hook": "static:app.load", "method": "init" },
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" },
-		{ "hook": "filter:notification.push", "method": "blockUserFollowNotifications" }
+		{ "hook": "filter:notification.push", "method": "blockUserFollowNotifications" },
+		{ "hook": "filter:account/profile.build", "method": "filterProfile" }
 	],
 	"templates": "static/templates",
 	"scripts": [
