@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-support-forum",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Turns a single category into a \"Support Forum\", topic creators can only see their own topics",
   "main": "library.js",
   "repository": {
