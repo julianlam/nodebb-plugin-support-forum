@@ -6,6 +6,7 @@ const User = require.main.require('./src/user');
 const Posts = require.main.require('./src/posts');
 const Topics = require.main.require('./src/topics');
 const Categories = require.main.require('./src/categories');
+const db = require.main.require('./src/database');
 const meta = require.main.require('./src/meta');
 const utils = require.main.require('./src/utils');
 
@@ -22,11 +23,11 @@ plugin.init = function (params, callback) {
 };
 
 plugin.appendConfig = async (config) => {
-	const { cid } = await meta.settings.get('support-forum');
+	const { cid, allowMods } = await meta.settings.get('support-forum');
 
 	return {
 		...config,
-		'support-forum': { cid },
+		'support-forum': { cid, allowMods: allowMods === 'on' },
 	};
 };
 
@@ -144,6 +145,27 @@ plugin.filterTids = async (data) => {
 	return data;
 };
 
+plugin.filterTopics = async (data) => {
+	const { cid } = await meta.settings.get('support-forum');
+	const supportCid = parseInt(cid, 10);
+	if (!supportCid || !Array.isArray(data.topics) || !data.topics.length) return data;
+
+	const allowed = await allowCheck(data.uid);
+	if (allowed) return data;
+
+	const callerUid = parseInt(data.uid, 10);
+	const before = data.topics.length;
+	data.topics = data.topics.filter(topic => (
+		!topic ||
+		parseInt(topic.cid, 10) !== supportCid ||
+		parseInt(topic.uid, 10) === callerUid
+	));
+	if (before !== data.topics.length) {
+		winston.verbose(`[plugins/support-forum] filter:topics.get blocked ${before - data.topics.length} topics for uid ${data.uid}`);
+	}
+	return data;
+};
+
 plugin.filterCategory = async (data) => {
 	const { cid, ownOnly } = await meta.settings.get('support-forum');
 	const allowed = await allowCheck(data.uid, data.cid);
@@ -161,6 +183,74 @@ plugin.filterCategory = async (data) => {
 		return { topics: filtered, uid: data.uid };
 	}
 
+	return data;
+};
+
+function setCounts(category, topics, posts) {
+	category.topic_count = topics;
+	category.post_count = posts;
+	category.totalTopicCount = topics;
+	category.totalPostCount = posts;
+}
+
+async function getOwnCounts(uid, supportCid) {
+	const tids = await db.getSortedSetRange(`cid:${supportCid}:uid:${uid}:tids`, 0, -1);
+	if (!tids.length) return { topics: 0, posts: 0 };
+	const fields = await Topics.getTopicsFields(tids, ['postcount']);
+	const posts = fields.reduce((sum, t) => sum + (parseInt(t && t.postcount, 10) || 0), 0);
+	return { topics: tids.length, posts };
+}
+
+async function adjustCountsForViewer(uid, categories) {
+	const { cid } = await meta.settings.get('support-forum');
+	const supportCid = parseInt(cid, 10);
+	if (!supportCid) return;
+
+	const allowed = await allowCheck(uid);
+	if (allowed) return;
+
+	const callerUid = parseInt(uid, 10);
+	const targets = categories.filter(c => c && parseInt(c.cid, 10) === supportCid);
+	if (!targets.length) return;
+
+	if (!callerUid) {
+		targets.forEach(c => setCounts(c, 0, 0));
+		return;
+	}
+
+	const own = await getOwnCounts(callerUid, supportCid);
+	targets.forEach(c => setCounts(c, own.topics, own.posts));
+}
+
+plugin.hideCounts = async (data) => {
+	if (Array.isArray(data.categoriesData)) {
+		await adjustCountsForViewer(data.uid, data.categoriesData);
+	}
+	return data;
+};
+
+plugin.hideCount = async (data) => {
+	if (data.category) {
+		await adjustCountsForViewer(data.uid, [data.category]);
+	}
+	return data;
+};
+
+function flattenTree(categories, out) {
+	categories.forEach((category) => {
+		if (!category) return;
+		out.push(category);
+		if (Array.isArray(category.children)) flattenTree(category.children, out);
+	});
+}
+
+plugin.hideCountsBuild = async (data) => {
+	const tree = data.templateData && data.templateData.categories;
+	if (Array.isArray(tree)) {
+		const flat = [];
+		flattenTree(tree, flat);
+		await adjustCountsForViewer(data.req.uid || 0, flat);
+	}
 	return data;
 };
 

@@ -318,11 +318,192 @@ describe('nodebb-plugin-support-forum', () => {
 		});
 	});
 
+	describe('hideCounts (filter:helpers.getVisibleCategories)', () => {
+		const sampleData = () => ({
+			categoriesData: [
+				{ cid: supportCid, topic_count: 99, post_count: 99, totalTopicCount: 99, totalPostCount: 99 },
+				{ cid: otherCid, topic_count: 3, post_count: 4, totalTopicCount: 3, totalPostCount: 4 },
+			],
+		});
+
+		const assertSupport = (cat, topics, posts) => {
+			assert.strictEqual(cat.topic_count, topics, 'topic_count');
+			assert.strictEqual(cat.post_count, posts, 'post_count');
+			assert.strictEqual(cat.totalTopicCount, topics, 'totalTopicCount');
+			assert.strictEqual(cat.totalPostCount, posts, 'totalPostCount');
+		};
+
+		it('zeros all count fields on the support category for guests', async () => {
+			const data = sampleData();
+			data.uid = 0;
+			const result = await plugin.hideCounts(data);
+			assertSupport(result.categoriesData[0], 0, 0);
+		});
+
+		it('shows the author their own topic and post counts', async () => {
+			const data = sampleData();
+			data.uid = authorUid;
+			const result = await plugin.hideCounts(data);
+			assertSupport(result.categoriesData[0], 1, 1);
+		});
+
+		it('shows zeros to a logged-in user with no support topics of their own', async () => {
+			const data = sampleData();
+			data.uid = otherUid;
+			const result = await plugin.hideCounts(data);
+			assertSupport(result.categoriesData[0], 0, 0);
+		});
+
+		it('never touches counts of non-support categories', async () => {
+			const data = sampleData();
+			data.uid = otherUid;
+			const result = await plugin.hideCounts(data);
+			assert.deepStrictEqual(result.categoriesData[1], {
+				cid: otherCid, topic_count: 3, post_count: 4, totalTopicCount: 3, totalPostCount: 4,
+			});
+		});
+
+		it('keeps real counts visible to administrators', async () => {
+			const data = sampleData();
+			data.uid = adminUid;
+			const result = await plugin.hideCounts(data);
+			assertSupport(result.categoriesData[0], 99, 99);
+		});
+
+		it('falls back to own counts for global moderators when allowMods=off', async () => {
+			const data = sampleData();
+			data.uid = gmodUid;
+			const result = await plugin.hideCounts(data);
+			assertSupport(result.categoriesData[0], 0, 0);
+		});
+
+		describe('with allowMods=on', () => {
+			before(async () => { await setPluginConfig({ allowMods: 'on' }); });
+			after(async () => { await setPluginConfig(); });
+
+			it('reveals real counts to global moderators', async () => {
+				const data = sampleData();
+				data.uid = gmodUid;
+				const result = await plugin.hideCounts(data);
+				assertSupport(result.categoriesData[0], 99, 99);
+			});
+
+			it('reveals real counts to category moderators', async () => {
+				const data = sampleData();
+				data.uid = modUid;
+				const result = await plugin.hideCounts(data);
+				assertSupport(result.categoriesData[0], 99, 99);
+			});
+		});
+	});
+
+	describe('hideCountsBuild (filter:categories.build, walks the tree)', () => {
+		const sampleData = uid => ({
+			req: { uid },
+			templateData: {
+				categories: [
+					{
+						cid: 999,
+						isSection: true,
+						children: [
+							{ cid: supportCid, topic_count: 99, post_count: 99, totalTopicCount: 99, totalPostCount: 99 },
+							{ cid: otherCid, topic_count: 3, post_count: 4, totalTopicCount: 3, totalPostCount: 4 },
+						],
+					},
+				],
+			},
+		});
+
+		it('adjusts counts for support category nested under a section', async () => {
+			const result = await plugin.hideCountsBuild(sampleData(authorUid));
+			const supportInTree = result.templateData.categories[0].children[0];
+			assert.strictEqual(supportInTree.topic_count, 1);
+			assert.strictEqual(supportInTree.totalPostCount, 1);
+		});
+
+		it('zeros support counts for guests in the tree', async () => {
+			const result = await plugin.hideCountsBuild(sampleData(0));
+			const supportInTree = result.templateData.categories[0].children[0];
+			assert.strictEqual(supportInTree.topic_count, 0);
+			assert.strictEqual(supportInTree.totalPostCount, 0);
+		});
+
+		it('leaves admins\' tree untouched', async () => {
+			const result = await plugin.hideCountsBuild(sampleData(adminUid));
+			const supportInTree = result.templateData.categories[0].children[0];
+			assert.strictEqual(supportInTree.topic_count, 99);
+		});
+	});
+
+	describe('hideCount (filter:category.get, single category)', () => {
+		const sampleData = uid => ({
+			uid,
+			category: { cid: supportCid, topic_count: 99, post_count: 99, totalTopicCount: 99, totalPostCount: 99 },
+		});
+
+		it('returns own counts for the author', async () => {
+			const result = await plugin.hideCount(sampleData(authorUid));
+			assert.strictEqual(result.category.topic_count, 1);
+			assert.strictEqual(result.category.totalPostCount, 1);
+		});
+
+		it('returns zeros for guests', async () => {
+			const result = await plugin.hideCount(sampleData(0));
+			assert.strictEqual(result.category.topic_count, 0);
+			assert.strictEqual(result.category.totalPostCount, 0);
+		});
+
+		it('keeps real counts for admins', async () => {
+			const result = await plugin.hideCount(sampleData(adminUid));
+			assert.strictEqual(result.category.topic_count, 99);
+		});
+
+		it('passes through when category is not the support category', async () => {
+			const data = { uid: otherUid, category: { cid: otherCid, topic_count: 3, post_count: 4 } };
+			const result = await plugin.hideCount(data);
+			assert.strictEqual(result.category.topic_count, 3);
+			assert.strictEqual(result.category.post_count, 4);
+		});
+	});
+
+	describe('filterTopics (filter:topics.get, backstops RSS)', () => {
+		const sampleTopics = () => [
+			{ tid: supportTid, cid: supportCid, uid: authorUid },
+			{ tid: otherTid, cid: otherCid, uid: authorUid },
+		];
+
+		it('hides another user\'s support topics from a regular viewer', async () => {
+			const result = await plugin.filterTopics({ uid: otherUid, topics: sampleTopics() });
+			assert.deepStrictEqual(result.topics.map(t => t.tid), [otherTid]);
+		});
+
+		it('keeps own support topics for the author', async () => {
+			const result = await plugin.filterTopics({ uid: authorUid, topics: sampleTopics() });
+			assert.deepStrictEqual(result.topics.map(t => t.tid), [supportTid, otherTid]);
+		});
+
+		it('keeps all topics for administrators', async () => {
+			const result = await plugin.filterTopics({ uid: adminUid, topics: sampleTopics() });
+			assert.deepStrictEqual(result.topics.map(t => t.tid), [supportTid, otherTid]);
+		});
+
+		it('hides all support topics from guests', async () => {
+			const result = await plugin.filterTopics({ uid: 0, topics: sampleTopics() });
+			assert.deepStrictEqual(result.topics.map(t => t.tid), [otherTid]);
+		});
+
+		it('does not modify topics when the input is empty', async () => {
+			const result = await plugin.filterTopics({ uid: otherUid, topics: [] });
+			assert.deepStrictEqual(result.topics, []);
+		});
+	});
+
 	describe('appendConfig', () => {
 		it('exposes the support-forum cid to the frontend config', async () => {
 			const result = await plugin.appendConfig({ someExisting: 'value' });
 			assert.strictEqual(result.someExisting, 'value');
 			assert.strictEqual(parseInt(result['support-forum'].cid, 10), parseInt(supportCid, 10));
+			assert.strictEqual(result['support-forum'].allowMods, false);
 		});
 	});
 });
